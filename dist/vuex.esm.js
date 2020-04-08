@@ -127,6 +127,10 @@ Module.prototype.getChild = function getChild (key) {
   return this._children[key]
 };
 
+Module.prototype.hasChild = function hasChild (key) {
+  return key in this._children
+};
+
 Module.prototype.update = function update (rawModule) {
   this._rawModule.namespaced = rawModule.namespaced;
   if (rawModule.actions) {
@@ -219,6 +223,13 @@ ModuleCollection.prototype.unregister = function unregister (path) {
   parent.removeChild(key);
 };
 
+ModuleCollection.prototype.isRegistered = function isRegistered (path) {
+  var parent = this.get(path.slice(0, -1));
+  var key = path[path.length - 1];
+
+  return parent.hasChild(key)
+};
+
 function update (path, targetModule, newModule) {
   if (process.env.NODE_ENV !== 'production') {
     assertRawModule(path, newModule);
@@ -291,21 +302,27 @@ function makeAssertionMessage (path, key, type, value, expected) {
 
 var Vue; // bind on install
 
-var Store = function Store (options) {
+var Store = function Store(options) {
   var this$1 = this;
   if ( options === void 0 ) options = {};
 
   // Auto install if it is not done yet and `window` has `Vue`.
   // To allow users to avoid auto-installation in some cases,
   // this code should be placed here. See #731
-  if (!Vue && typeof window !== 'undefined' && window.Vue) {
+  if (!Vue && typeof window !== "undefined" && window.Vue) {
     install(window.Vue);
   }
 
-  if (process.env.NODE_ENV !== 'production') {
+  if (process.env.NODE_ENV !== "production") {
     assert(Vue, "must call Vue.use(Vuex) before creating a store instance.");
-    assert(typeof Promise !== 'undefined', "vuex requires a Promise polyfill in this browser.");
-    assert(this instanceof Store, "store must be called with the new operator.");
+    assert(
+      typeof Promise !== "undefined",
+      "vuex requires a Promise polyfill in this browser."
+    );
+    assert(
+      this instanceof Store,
+      "store must be called with the new operator."
+    );
   }
 
   var plugins = options.plugins; if ( plugins === void 0 ) plugins = [];
@@ -328,11 +345,11 @@ var Store = function Store (options) {
   var ref = this;
   var dispatch = ref.dispatch;
   var commit = ref.commit;
-  this.dispatch = function boundDispatch (type, payload) {
-    return dispatch.call(store, type, payload)
+  this.dispatch = function boundDispatch(type, payload) {
+    return dispatch.call(store, type, payload);
   };
-  this.commit = function boundCommit (type, payload, options) {
-    return commit.call(store, type, payload, options)
+  this.commit = function boundCommit(type, payload, options) {
+    return commit.call(store, type, payload, options);
   };
 
   // strict mode
@@ -352,7 +369,8 @@ var Store = function Store (options) {
   // apply plugins
   plugins.forEach(function (plugin) { return plugin(this$1); });
 
-  var useDevtools = options.devtools !== undefined ? options.devtools : Vue.config.devtools;
+  var useDevtools =
+    options.devtools !== undefined ? options.devtools : Vue.config.devtools;
   if (useDevtools) {
     devtoolPlugin(this);
   }
@@ -361,12 +379,15 @@ var Store = function Store (options) {
 var prototypeAccessors$1 = { state: { configurable: true } };
 
 prototypeAccessors$1.state.get = function () {
-  return this._vm._data.$$state
+  return this._vm._data.$$state;
 };
 
 prototypeAccessors$1.state.set = function (v) {
-  if (process.env.NODE_ENV !== 'production') {
-    assert(false, "use store.replaceState() to explicit replace store state.");
+  if (process.env.NODE_ENV !== "production") {
+    assert(
+      false,
+      "use store.replaceState() to explicit replace store state."
+    );
   }
 };
 
@@ -374,21 +395,30 @@ Store.prototype.commit = function commit (_type, _payload, _options) {
     var this$1 = this;
 
   // check object-style commit
-  var ref = unifyObjectStyle(_type, _payload, _options);
+  var ref = unifyObjectStyle(
+    _type,
+    _payload,
+    _options
+  );
     var type = ref.type;
     var payload = ref.payload;
     var options = ref.options;
 
   var mutation = { type: type, payload: payload };
+
+  if (options && options.meta) {
+    mutation.meta = options.meta;
+  }
+
   var entry = this._mutations[type];
   if (!entry) {
-    if (process.env.NODE_ENV !== 'production') {
+    if (process.env.NODE_ENV !== "production") {
       console.error(("[vuex] unknown mutation type: " + type));
     }
-    return
+    return;
   }
   this._withCommit(function () {
-    entry.forEach(function commitIterator (handler) {
+    entry.forEach(function commitIterator(handler) {
       handler(payload);
     });
   });
@@ -397,13 +427,10 @@ Store.prototype.commit = function commit (_type, _payload, _options) {
     .slice() // shallow copy to prevent iterator invalidation if subscriber synchronously calls unsubscribe
     .forEach(function (sub) { return sub(mutation, this$1.state); });
 
-  if (
-    process.env.NODE_ENV !== 'production' &&
-    options && options.silent
-  ) {
+  if (process.env.NODE_ENV !== "production" && options && options.silent) {
     console.warn(
       "[vuex] mutation type: " + type + ". Silent option has been removed. " +
-      'Use the filter functionality in the vue-devtools'
+        "Use the filter functionality in the vue-devtools"
     );
   }
 };
@@ -419,10 +446,10 @@ Store.prototype.dispatch = function dispatch (_type, _payload) {
   var action = { type: type, payload: payload };
   var entry = this._actions[type];
   if (!entry) {
-    if (process.env.NODE_ENV !== 'production') {
+    if (process.env.NODE_ENV !== "production") {
       console.error(("[vuex] unknown action type: " + type));
     }
-    return
+    return;
   }
 
   try {
@@ -431,15 +458,16 @@ Store.prototype.dispatch = function dispatch (_type, _payload) {
       .filter(function (sub) { return sub.before; })
       .forEach(function (sub) { return sub.before(action, this$1.state); });
   } catch (e) {
-    if (process.env.NODE_ENV !== 'production') {
+    if (process.env.NODE_ENV !== "production") {
       console.warn("[vuex] error in before action subscribers: ");
       console.error(e);
     }
   }
 
-  var result = entry.length > 1
-    ? Promise.all(entry.map(function (handler) { return handler(payload); }))
-    : entry[0](payload);
+  var result =
+    entry.length > 1
+      ? Promise.all(entry.map(function (handler) { return handler(payload); }))
+      : entry[0](payload);
 
   return result.then(function (res) {
     try {
@@ -447,31 +475,38 @@ Store.prototype.dispatch = function dispatch (_type, _payload) {
         .filter(function (sub) { return sub.after; })
         .forEach(function (sub) { return sub.after(action, this$1.state); });
     } catch (e) {
-      if (process.env.NODE_ENV !== 'production') {
+      if (process.env.NODE_ENV !== "production") {
         console.warn("[vuex] error in after action subscribers: ");
         console.error(e);
       }
     }
-    return res
-  })
+    return res;
+  });
 };
 
 Store.prototype.subscribe = function subscribe (fn) {
-  return genericSubscribe(fn, this._subscribers)
+  return genericSubscribe(fn, this._subscribers);
 };
 
 Store.prototype.subscribeAction = function subscribeAction (fn) {
-  var subs = typeof fn === 'function' ? { before: fn } : fn;
-  return genericSubscribe(subs, this._actionSubscribers)
+  var subs = typeof fn === "function" ? { before: fn } : fn;
+  return genericSubscribe(subs, this._actionSubscribers);
 };
 
 Store.prototype.watch = function watch (getter, cb, options) {
     var this$1 = this;
 
-  if (process.env.NODE_ENV !== 'production') {
-    assert(typeof getter === 'function', "store.watch only accepts a function.");
+  if (process.env.NODE_ENV !== "production") {
+    assert(
+      typeof getter === "function",
+      "store.watch only accepts a function."
+    );
   }
-  return this._watcherVM.$watch(function () { return getter(this$1.state, this$1.getters); }, cb, options)
+  return this._watcherVM.$watch(
+    function () { return getter(this$1.state, this$1.getters); },
+    cb,
+    options
+  );
 };
 
 Store.prototype.replaceState = function replaceState (state) {
@@ -485,15 +520,24 @@ Store.prototype.replaceState = function replaceState (state) {
 Store.prototype.registerModule = function registerModule (path, rawModule, options) {
     if ( options === void 0 ) options = {};
 
-  if (typeof path === 'string') { path = [path]; }
+  if (typeof path === "string") { path = [path]; }
 
-  if (process.env.NODE_ENV !== 'production') {
+  if (process.env.NODE_ENV !== "production") {
     assert(Array.isArray(path), "module path must be a string or an Array.");
-    assert(path.length > 0, 'cannot register the root module by using registerModule.');
+    assert(
+      path.length > 0,
+      "cannot register the root module by using registerModule."
+    );
   }
 
   this._modules.register(path, rawModule);
-  installModule(this, this.state, path, this._modules.get(path), options.preserveState);
+  installModule(
+    this,
+    this.state,
+    path,
+    this._modules.get(path),
+    options.preserveState
+  );
   // reset store to update getters...
   resetStoreVM(this, this.state);
 };
@@ -501,9 +545,9 @@ Store.prototype.registerModule = function registerModule (path, rawModule, optio
 Store.prototype.unregisterModule = function unregisterModule (path) {
     var this$1 = this;
 
-  if (typeof path === 'string') { path = [path]; }
+  if (typeof path === "string") { path = [path]; }
 
-  if (process.env.NODE_ENV !== 'production') {
+  if (process.env.NODE_ENV !== "production") {
     assert(Array.isArray(path), "module path must be a string or an Array.");
   }
 
@@ -513,6 +557,16 @@ Store.prototype.unregisterModule = function unregisterModule (path) {
     Vue.delete(parentState, path[path.length - 1]);
   });
   resetStore(this);
+};
+
+Store.prototype.hasModule = function hasModule (path) {
+  if (typeof path === "string") { path = [path]; }
+
+  if (process.env.NODE_ENV !== "production") {
+    assert(Array.isArray(path), "module path must be a string or an Array.");
+  }
+
+  return this._modules.isRegistered(path);
 };
 
 Store.prototype.hotUpdate = function hotUpdate (newOptions) {
@@ -529,7 +583,7 @@ Store.prototype._withCommit = function _withCommit (fn) {
 
 Object.defineProperties( Store.prototype, prototypeAccessors$1 );
 
-function genericSubscribe (fn, subs) {
+function genericSubscribe(fn, subs) {
   if (subs.indexOf(fn) < 0) {
     subs.push(fn);
   }
@@ -538,10 +592,10 @@ function genericSubscribe (fn, subs) {
     if (i > -1) {
       subs.splice(i, 1);
     }
-  }
+  };
 }
 
-function resetStore (store, hot) {
+function resetStore(store, hot) {
   store._actions = Object.create(null);
   store._mutations = Object.create(null);
   store._wrappedGetters = Object.create(null);
@@ -553,7 +607,7 @@ function resetStore (store, hot) {
   resetStoreVM(store, state, hot);
 }
 
-function resetStoreVM (store, state, hot) {
+function resetStoreVM(store, state, hot) {
   var oldVm = store._vm;
 
   // bind store public getters
@@ -569,7 +623,7 @@ function resetStoreVM (store, state, hot) {
     computed[key] = partial(fn, store);
     Object.defineProperty(store.getters, key, {
       get: function () { return store._vm[key]; },
-      enumerable: true // for local getters
+      enumerable: true, // for local getters
     });
   });
 
@@ -580,9 +634,9 @@ function resetStoreVM (store, state, hot) {
   Vue.config.silent = true;
   store._vm = new Vue({
     data: {
-      $$state: state
+      $$state: state,
     },
-    computed: computed
+    computed: computed,
   });
   Vue.config.silent = silent;
 
@@ -603,14 +657,21 @@ function resetStoreVM (store, state, hot) {
   }
 }
 
-function installModule (store, rootState, path, module, hot) {
+function installModule(store, rootState, path, module, hot) {
   var isRoot = !path.length;
   var namespace = store._modules.getNamespace(path);
 
   // register in namespace map
   if (module.namespaced) {
-    if (store._modulesNamespaceMap[namespace] && process.env.NODE_ENV !== 'production') {
-      console.error(("[vuex] duplicate namespace " + namespace + " for the namespaced module " + (path.join('/'))));
+    if (
+      store._modulesNamespaceMap[namespace] &&
+      process.env.NODE_ENV !== "production"
+    ) {
+      console.error(
+        ("[vuex] duplicate namespace " + namespace + " for the namespaced module " + (path.join(
+          "/"
+        )))
+      );
     }
     store._modulesNamespaceMap[namespace] = module;
   }
@@ -620,10 +681,12 @@ function installModule (store, rootState, path, module, hot) {
     var parentState = getNestedState(rootState, path.slice(0, -1));
     var moduleName = path[path.length - 1];
     store._withCommit(function () {
-      if (process.env.NODE_ENV !== 'production') {
+      if (process.env.NODE_ENV !== "production") {
         if (moduleName in parentState) {
           console.warn(
-            ("[vuex] state field \"" + moduleName + "\" was overridden by a module with the same name at \"" + (path.join('.')) + "\"")
+            ("[vuex] state field \"" + moduleName + "\" was overridden by a module with the same name at \"" + (path.join(
+              "."
+            )) + "\"")
           );
         }
       }
@@ -631,7 +694,7 @@ function installModule (store, rootState, path, module, hot) {
     });
   }
 
-  var local = module.context = makeLocalContext(store, namespace, path);
+  var local = (module.context = makeLocalContext(store, namespace, path));
 
   module.forEachMutation(function (mutation, key) {
     var namespacedType = namespace + key;
@@ -658,43 +721,57 @@ function installModule (store, rootState, path, module, hot) {
  * make localized dispatch, commit, getters and state
  * if there is no namespace, just use root ones
  */
-function makeLocalContext (store, namespace, path) {
-  var noNamespace = namespace === '';
+function makeLocalContext(store, namespace, path) {
+  var noNamespace = namespace === "";
 
   var local = {
-    dispatch: noNamespace ? store.dispatch : function (_type, _payload, _options) {
-      var args = unifyObjectStyle(_type, _payload, _options);
-      var payload = args.payload;
-      var options = args.options;
-      var type = args.type;
+    dispatch: noNamespace
+      ? store.dispatch
+      : function (_type, _payload, _options) {
+          var args = unifyObjectStyle(_type, _payload, _options);
+          var payload = args.payload;
+          var options = args.options;
+          var type = args.type;
 
-      if (!options || !options.root) {
-        type = namespace + type;
-        if (process.env.NODE_ENV !== 'production' && !store._actions[type]) {
-          console.error(("[vuex] unknown local action type: " + (args.type) + ", global type: " + type));
-          return
-        }
-      }
+          if (!options || !options.root) {
+            type = namespace + type;
+            if (
+              process.env.NODE_ENV !== "production" &&
+              !store._actions[type]
+            ) {
+              console.error(
+                ("[vuex] unknown local action type: " + (args.type) + ", global type: " + type)
+              );
+              return;
+            }
+          }
 
-      return store.dispatch(type, payload)
-    },
+          return store.dispatch(type, payload);
+        },
 
-    commit: noNamespace ? store.commit : function (_type, _payload, _options) {
-      var args = unifyObjectStyle(_type, _payload, _options);
-      var payload = args.payload;
-      var options = args.options;
-      var type = args.type;
+    commit: noNamespace
+      ? store.commit
+      : function (_type, _payload, _options) {
+          var args = unifyObjectStyle(_type, _payload, _options);
+          var payload = args.payload;
+          var options = args.options;
+          var type = args.type;
 
-      if (!options || !options.root) {
-        type = namespace + type;
-        if (process.env.NODE_ENV !== 'production' && !store._mutations[type]) {
-          console.error(("[vuex] unknown local mutation type: " + (args.type) + ", global type: " + type));
-          return
-        }
-      }
+          if (!options || !options.root) {
+            type = namespace + type;
+            if (
+              process.env.NODE_ENV !== "production" &&
+              !store._mutations[type]
+            ) {
+              console.error(
+                ("[vuex] unknown local mutation type: " + (args.type) + ", global type: " + type)
+              );
+              return;
+            }
+          }
 
-      store.commit(type, payload, options);
-    }
+          store.commit(type, payload, options);
+        },
   };
 
   // getters and state object must be gotten lazily
@@ -703,23 +780,23 @@ function makeLocalContext (store, namespace, path) {
     getters: {
       get: noNamespace
         ? function () { return store.getters; }
-        : function () { return makeLocalGetters(store, namespace); }
+        : function () { return makeLocalGetters(store, namespace); },
     },
     state: {
-      get: function () { return getNestedState(store.state, path); }
-    }
+      get: function () { return getNestedState(store.state, path); },
+    },
   });
 
-  return local
+  return local;
 }
 
-function makeLocalGetters (store, namespace) {
+function makeLocalGetters(store, namespace) {
   if (!store._makeLocalGettersCache[namespace]) {
     var gettersProxy = {};
     var splitPos = namespace.length;
     Object.keys(store.getters).forEach(function (type) {
       // skip if the target getter is not match this namespace
-      if (type.slice(0, splitPos) !== namespace) { return }
+      if (type.slice(0, splitPos) !== namespace) { return; }
 
       // extract local getter type
       var localType = type.slice(splitPos);
@@ -729,98 +806,114 @@ function makeLocalGetters (store, namespace) {
       // we do not want to evaluate the getters in this time.
       Object.defineProperty(gettersProxy, localType, {
         get: function () { return store.getters[type]; },
-        enumerable: true
+        enumerable: true,
       });
     });
     store._makeLocalGettersCache[namespace] = gettersProxy;
   }
 
-  return store._makeLocalGettersCache[namespace]
+  return store._makeLocalGettersCache[namespace];
 }
 
-function registerMutation (store, type, handler, local) {
+function registerMutation(store, type, handler, local) {
   var entry = store._mutations[type] || (store._mutations[type] = []);
-  entry.push(function wrappedMutationHandler (payload) {
+  entry.push(function wrappedMutationHandler(payload) {
     handler.call(store, local.state, payload);
   });
 }
 
-function registerAction (store, type, handler, local) {
+function registerAction(store, type, handler, local) {
   var entry = store._actions[type] || (store._actions[type] = []);
-  entry.push(function wrappedActionHandler (payload) {
-    var res = handler.call(store, {
-      dispatch: local.dispatch,
-      commit: local.commit,
-      getters: local.getters,
-      state: local.state,
-      rootGetters: store.getters,
-      rootState: store.state
-    }, payload);
+  entry.push(function wrappedActionHandler(payload) {
+    var res = handler.call(
+      store,
+      {
+        dispatch: local.dispatch,
+        commit: local.commit,
+        getters: local.getters,
+        state: local.state,
+        rootGetters: store.getters,
+        rootState: store.state,
+      },
+      payload
+    );
     if (!isPromise(res)) {
       res = Promise.resolve(res);
     }
     if (store._devtoolHook) {
       return res.catch(function (err) {
-        store._devtoolHook.emit('vuex:error', err);
-        throw err
-      })
+        store._devtoolHook.emit("vuex:error", err);
+        throw err;
+      });
     } else {
-      return res
+      return res;
     }
   });
 }
 
-function registerGetter (store, type, rawGetter, local) {
+function registerGetter(store, type, rawGetter, local) {
   if (store._wrappedGetters[type]) {
-    if (process.env.NODE_ENV !== 'production') {
+    if (process.env.NODE_ENV !== "production") {
       console.error(("[vuex] duplicate getter key: " + type));
     }
-    return
+    return;
   }
-  store._wrappedGetters[type] = function wrappedGetter (store) {
+  store._wrappedGetters[type] = function wrappedGetter(store) {
     return rawGetter(
       local.state, // local state
       local.getters, // local getters
       store.state, // root state
       store.getters // root getters
-    )
+    );
   };
 }
 
-function enableStrictMode (store) {
-  store._vm.$watch(function () { return this._data.$$state }, function () {
-    if (process.env.NODE_ENV !== 'production') {
-      assert(store._committing, "do not mutate vuex store state outside mutation handlers.");
-    }
-  }, { deep: true, sync: true });
+function enableStrictMode(store) {
+  store._vm.$watch(
+    function () {
+      return this._data.$$state;
+    },
+    function () {
+      if (process.env.NODE_ENV !== "production") {
+        assert(
+          store._committing,
+          "do not mutate vuex store state outside mutation handlers."
+        );
+      }
+    },
+    { deep: true, sync: true }
+  );
 }
 
-function getNestedState (state, path) {
-  return path.reduce(function (state, key) { return state[key]; }, state)
+function getNestedState(state, path) {
+  return path.reduce(function (state, key) { return state[key]; }, state);
 }
 
-function unifyObjectStyle (type, payload, options) {
+function unifyObjectStyle(type, payload, options) {
   if (isObject(type) && type.type) {
     options = payload;
     payload = type;
     type = type.type;
   }
 
-  if (process.env.NODE_ENV !== 'production') {
-    assert(typeof type === 'string', ("expects string as the type, but found " + (typeof type) + "."));
+  if (process.env.NODE_ENV !== "production") {
+    assert(
+      typeof type === "string",
+      ("expects string as the type, but found " + (typeof type) + ".")
+    );
   }
 
-  return { type: type, payload: payload, options: options }
+  return { type: type, payload: payload, options: options };
 }
 
-function install (_Vue) {
+function install(_Vue) {
   if (Vue && _Vue === Vue) {
-    if (process.env.NODE_ENV !== 'production') {
+    if (process.env.NODE_ENV !== "production") {
       console.error(
-        '[vuex] already installed. Vue.use(Vuex) should be called only once.'
+        "[vuex] already installed. Vue.use(Vuex) should be called only once."
       );
     }
-    return
+    return;
   }
   Vue = _Vue;
   applyMixin(Vue);
@@ -1048,4 +1141,4 @@ var index_esm = {
 };
 
 export default index_esm;
-export { Store, install, mapState, mapMutations, mapGetters, mapActions, createNamespacedHelpers };
+export { Store, createNamespacedHelpers, install, mapActions, mapGetters, mapMutations, mapState };
