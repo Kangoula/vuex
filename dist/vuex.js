@@ -1,5 +1,5 @@
 /**
- * vuex v3.1.3
+ * vuex v3.2.0
  * (c) 2020 Evan You
  * @license MIT
  */
@@ -1138,7 +1138,7 @@
   var index = {
     Store: Store,
     install: install,
-    version: '3.1.3',
+    version: '3.2.0',
     mapState: mapState,
     mapMutations: mapMutations,
     mapGetters: mapGetters,
