@@ -1,27 +1,29 @@
-# Vuex [![Build Status](https://circleci.com/gh/vuejs/vuex/tree/dev.png?style=shield)](https://circleci.com/gh/vuejs/vuex)
+# Vuex fork
 
-> Centralized State Management for Vue.js.
+> ## Add support for the `meta` field in mutations as stated in the [November 3rd 2017's PR](https://github.com/vuejs/vuex/pull/1043)
 
-<p align="center">
-  <img width="700px" src="https://raw.githubusercontent.com/vuejs/vuex/dev/docs/.vuepress/public/vuex.png">
-</p>
+# Additions
 
-- [What is Vuex?](https://vuex.vuejs.org/)
-- [Full Documentation](http://vuex.vuejs.org/)
+There may be times when your plugin needs to know more information about a mutation in order to decide what kind of action to take. In order to pass this 'meta' information to the plugin, the user can supply the meta property to the options argument on a commit: commit(TYPE, payload, { meta: { cache: true } }). This meta information is passed along with the type and payload to the subscribe function:
 
-## Examples
+You can commit mutations by passing a `meta` field in its options:
 
-- [Counter](https://github.com/vuejs/vuex/tree/dev/examples/counter)
-- [Counter with Hot Reload](https://github.com/vuejs/vuex/tree/dev/examples/counter-hot)
-- [TodoMVC](https://github.com/vuejs/vuex/tree/dev/examples/todomvc)
-- [Flux Chat](https://github.com/vuejs/vuex/tree/dev/examples/chat)
-- [Shopping Cart](https://github.com/vuejs/vuex/tree/dev/examples/shopping-cart)
+```javascript
+commit("myMutation", "value", { meta: { someMetadataField: true } });
+```
 
-Running the examples:
+Then when you subscribe to store mutations in a plugin:
 
-``` bash
-$ npm install
-$ npm run dev # serve examples at localhost:8080
+```javascript
+const myPlugin = (store) => {
+  // called when the store is initialized
+  store.subscribe((mutation, state) => {
+    // The mutation comes in the format of `{ type, payload, meta }`.
+    if (mutation.meta.someMetadataField) {
+      // do stuff
+    }
+  });
+};
 ```
 
 ## License
